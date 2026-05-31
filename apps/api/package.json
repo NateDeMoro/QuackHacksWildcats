@@ -10,8 +10,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@google-cloud/speech": "^7.3.1",
+    "@google/genai": "^2.7.0",
     "@hono/node-server": "^1.13.7",
     "@quack/shared": "workspace:*",
+    "firebase-admin": "^13.10.0",
     "hono": "^4.6.9"
   },
   "devDependencies": {

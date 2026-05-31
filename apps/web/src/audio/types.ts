@@ -27,4 +27,10 @@ export interface LiveSnapshot {
   paceSps: number;
   inDeadAir: boolean;
   deadAirMs: number;
+  /** Latest voiced pitch in Hz, or 0 when unvoiced. */
+  pitchHz: number;
+  /** Rolling std of recent voiced pitch (Hz) — the monotone vs. expressive proxy. */
+  pitchVarHz: number;
+  /** The single calm coaching nudge, or null when nothing to surface. */
+  nudge: string | null;
 }

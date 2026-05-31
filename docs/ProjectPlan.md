@@ -59,7 +59,10 @@ A browser app, laptop-first, that captures the mic and shows the simplest live a
 Add pitch and pitch variation, streaming STT for filler words and accurate pace, and the single calm nudge. Begin recording each session's signals and transcript into the modality-agnostic, per-channel schema. Build the context-capture UI: upload or paste the slideshow, script, or notes, plus the open-ended audience and setting fields. Delivers the complete general real-time experience and the context inputs. Feasibility is high; STT is the main new dependency.
 
 ### Stage 2: aggregate base
+First consolidate all configurables (thresholds, tunable constants, prompts, model names, and other settings currently scattered across the codebase) into a single place. This will likely require some refactoring.
+
 On session end, send the transcript, the audio-metric summary, the parsed speech material, and the audience and setting fields to Gemini, which returns a prioritized, context-aware delivery report. This can also compare what was said against what was planned (points covered, deviations, running long). Add lightweight session storage for cross-rehearsal comparison. Delivers context-aware advice (a core differentiator) and the after-the-fact report. Feasibility is high; mostly prompt design, UI, and light content parsing.
+
 
 ### Stage 3: differentiator layer (audio)
 Add emphasis-versus-meaning (align the words Gemini judges important, informed by the uploaded script and slides, against the acoustically stressed words) and audio tone-content mismatch (content sentiment against prosody) to the aggregate report. This is the novel core and the reason the product is distinct. Feasibility is moderate; the word-stress alignment is the one piece of real engineering, made tractable by running post-hoc.
@@ -70,7 +73,8 @@ Optional, in rough priority order:
 - Live freeze-recovery (script-rescue): natural now that the script or notes are already ingested. Align the live transcript to the loaded material, and surface the next line when a pause runs long.
 - Delivery tuner: show a target emphasis contour for a key line and let the user match it.
 - Gesture-speech synchrony via MediaPipe pose, once the video layer exists.
-- Smart-glasses delivery, much later (the Meta toolkit is in preview and partner-gated).
+- wireless earbud real time assistance.
+- Dynamic time increment lengths for chunking transcript (word count and analytics). Content-based chunking.
 
 ## Scope guidance and risks
 Keep the real-time side deliberately thin and spend build time on the aggregate analysis that differentiates the product. Main risks: the STT disfluency-preservation configuration, and the word-stress alignment in Stage 3. One quality note: emphasis-versus-meaning is much stronger when the user uploads the script or slides, since otherwise Gemini infers importance from the transcript alone, so the UI should actively encourage uploading the material. Avoid gold-plating the dashboard.

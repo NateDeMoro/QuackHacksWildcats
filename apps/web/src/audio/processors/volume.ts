@@ -1,9 +1,10 @@
 import type { ScalarSample } from '@quack/shared';
 import type { AudioFrame, SignalProcessor } from '../types.js';
-
-const DBFS_FLOOR = -100;
-const EMIT_INTERVAL_MS = 50; // record at ~20 Hz; UI reads `lastDbfs` every frame
-const SMOOTH_ALPHA = 0.12; // EMA on linear RMS, ~120 ms time constant at 60 fps
+import {
+  VOLUME_DBFS_FLOOR as DBFS_FLOOR,
+  VOLUME_EMIT_INTERVAL_MS as EMIT_INTERVAL_MS,
+  VOLUME_SMOOTH_ALPHA as SMOOTH_ALPHA,
+} from '../../config.js';
 
 /** RMS volume in dBFS on channel `audio.volume`. */
 export class VolumeProcessor implements SignalProcessor {

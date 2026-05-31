@@ -5,6 +5,7 @@ import {
   type SignalChannel,
   type SessionRecord,
   type Modality,
+  type SpeechContext,
 } from '@quack/shared';
 
 /**
@@ -44,15 +45,19 @@ export class Recorder {
     return now - this.startEpochMs;
   }
 
-  /** Produce the SessionRecord. Stage 0: channels only (no transcript/context yet). */
-  finish(now: number, capturedModalities: Modality[]): SessionRecord {
+  /**
+   * Produce the SessionRecord. `context` (the speech material + audience/setting fields) is
+   * attached when supplied; the transcript is added post-hoc by the caller after STT.
+   */
+  finish(now: number, capturedModalities: Modality[], context?: SpeechContext): SessionRecord {
     return {
-      sessionId: this.startedAtIso, // simple unique id for Stage 0; replace with uuid in Stage 1
+      sessionId: crypto.randomUUID(),
       schemaVersion: SCHEMA_VERSION,
       startedAt: this.startedAtIso,
       durationMs: now - this.startEpochMs,
       capturedModalities,
       channels: [...this.channels.values()],
+      ...(context ? { context } : {}),
     };
   }
 }

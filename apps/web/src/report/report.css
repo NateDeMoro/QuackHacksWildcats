@@ -1,0 +1,208 @@
+/* Post-session report layout. Cards reuse the shared `.card` token styles (dashboard.css). */
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.report__heading {
+  font-family: var(--t-display-family);
+  font-weight: var(--t-display-weight);
+  font-size: 26px;
+  color: var(--c-ink);
+  margin: var(--s-4) 0 0;
+}
+
+.report__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--s-3);
+}
+
+.metric__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.metric__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.metric__value {
+  font-family: var(--t-mono-family);
+  font-size: 22px;
+  color: var(--c-ink);
+}
+
+/* Graded signals (volume/pace/pitch) show a word category; the reading appears on hover/focus. */
+.metric__value--category {
+  position: relative;
+  font-family: var(--t-display-family);
+  font-weight: var(--t-title-weight);
+  cursor: help;
+}
+
+.metric__detail {
+  position: absolute;
+  bottom: calc(100% + var(--s-2));
+  left: 0;
+  white-space: nowrap;
+  font-family: var(--t-mono-family);
+  font-size: 13px;
+  color: var(--c-ink);
+  background: var(--c-surface-strong);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--radius-sm);
+  padding: var(--s-1) var(--s-2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  z-index: 1;
+}
+
+.metric__value--category:hover .metric__detail,
+.metric__value--category:focus-visible .metric__detail {
+  opacity: 1;
+}
+
+/* Pace over time: 4 equal-duration quarters of the talk, each verdict-colored. */
+.pace__quarters {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+
+.pace__quarter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  cursor: help;
+}
+
+.pace__bar {
+  height: 8px;
+  border-radius: var(--radius-pill);
+}
+
+.pace__cat {
+  font-family: var(--t-display-family);
+  font-weight: var(--t-title-weight);
+  font-size: 14px;
+  color: var(--c-ink);
+}
+
+.pace__detail {
+  position: absolute;
+  bottom: calc(100% + var(--s-2));
+  left: 0;
+  white-space: nowrap;
+  font-family: var(--t-mono-family);
+  font-size: 13px;
+  color: var(--c-ink);
+  background: var(--c-surface-strong);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--radius-sm);
+  padding: var(--s-1) var(--s-2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  z-index: 1;
+}
+
+.pace__quarter:hover .pace__detail,
+.pace__quarter:focus-visible .pace__detail {
+  opacity: 1;
+}
+
+/* Context-aware advice (real, from the Gemini report). */
+.advice__summary {
+  margin: 0 0 var(--s-4);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--c-body-strong);
+}
+
+.advice__list {
+  margin: 0 0 var(--s-4);
+  padding-left: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.advice__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.advice__title {
+  font-weight: 600;
+  color: var(--c-ink);
+}
+
+.advice__detail {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--c-body);
+}
+
+.advice__evidence {
+  font-family: var(--t-mono-family);
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.coverage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  border-top: 1px solid var(--c-hairline);
+  padding-top: var(--s-4);
+}
+
+.coverage__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.coverage__title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.coverage__items {
+  margin: 0;
+  padding-left: var(--s-5);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--c-body-strong);
+}
+
+/* Stage 3 placeholder cards. */
+.placeholder {
+  opacity: 0.85;
+}
+
+.placeholder__tag {
+  display: inline-block;
+  margin-left: var(--s-2);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-muted);
+  background: var(--c-surface-strong);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  vertical-align: middle;
+}

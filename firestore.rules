@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Sessions are read/written only by the API (firebase-admin, which bypasses these rules).
+// These rules are defense-in-depth: a direct client connection gets nothing but its own
+// sessions, and everything else is denied. Ownership is path-based (uid in the path).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/sessions/{sessionId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

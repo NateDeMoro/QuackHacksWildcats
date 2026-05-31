@@ -1,11 +1,10 @@
 import type { EventSample } from '@quack/shared';
 import type { AudioFrame, SignalProcessor } from '../types.js';
 import { rmsDbfs } from './volume.js';
-
-/** Below this loudness counts as silence. */
-const SILENCE_DBFS = -55;
-/** A silence longer than this is committed as a pause event. */
-const MIN_PAUSE_MS = 350;
+import {
+  PAUSE_SILENCE_DBFS as SILENCE_DBFS,
+  PAUSE_MIN_MS as MIN_PAUSE_MS,
+} from '../../config.js';
 
 /**
  * Pause / dead-air detection on channel `audio.pause`. Emits one interval EventSample per

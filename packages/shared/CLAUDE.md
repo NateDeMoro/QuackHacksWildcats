@@ -15,6 +15,7 @@ Imported by both `apps/web` (recorder, report typing) and `apps/api` (aggregate 
 | src/summaries.ts | ChannelSummary + summarizer registry | preparing aggregate input; adding a signal |
 | src/aggregate.ts | AggregateInput/Report/Fn contract | implementing or consuming the report |
 | src/context.ts | SpeechContext, ParsedMaterial, ContextFields | building context-capture UI |
+| src/config.ts | cross-cutting pace/pitch verdict bands (live + report) | changing a shared verdict threshold |
 
 ## Adding a new signal/modality
 1. Emit `SignalChannel`s with a new `descriptor` (`${modality}.${signal}`).

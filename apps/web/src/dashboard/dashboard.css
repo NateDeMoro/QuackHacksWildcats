@@ -13,6 +13,13 @@
   margin: 0 0 var(--s-2);
 }
 
+.app__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+
 .app__subtitle {
   color: var(--c-muted);
   margin: 0 0 var(--s-6);
@@ -54,6 +61,149 @@
 .error {
   color: var(--c-error);
   font-size: 14px;
+}
+
+.nudge {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: var(--s-3) var(--s-5);
+  margin-bottom: var(--s-4);
+  background: var(--c-canvas-soft);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--radius-card);
+}
+
+.nudge__text {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--c-ink);
+  transition: opacity 200ms ease;
+}
+
+.nudge__text--idle {
+  color: var(--c-muted);
+  font-weight: 400;
+}
+
+/* --- live rehearsal screen: nudge centerpiece + peripheral cue strip ----------- */
+.live {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+}
+
+/* The nudge is the hero: large editorial display type, centered, generous whitespace. */
+.nudge--hero {
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  min-height: 240px;
+  padding: var(--s-8) var(--s-5);
+  background: transparent;
+  border: none;
+  margin: 0;
+}
+
+.nudge--hero .nudge__text {
+  font-family: var(--t-display-family);
+  font-weight: var(--t-display-weight);
+  font-size: 34px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  max-width: 22ch;
+}
+
+/* Reactive orb tint — calm atmospheric feedback (decoration only). */
+.orb--idle {
+  --orb-color: var(--c-lavender);
+}
+.orb--good {
+  --orb-color: var(--c-mint);
+}
+.orb--slow {
+  --orb-color: var(--c-peach);
+}
+.orb--fast {
+  --orb-color: var(--c-rose);
+}
+
+.cuestrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+
+.cue {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 1 1 0;
+  min-width: 120px;
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-surface-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+}
+
+.cue__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--c-hairline-strong);
+  transition: background-color 200ms ease;
+}
+
+.cue__label {
+  color: var(--c-muted);
+}
+
+.cue__state {
+  margin-left: auto;
+  color: var(--c-body-strong);
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.cue__bar {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--c-surface-strong);
+  overflow: hidden;
+}
+
+.cue__bar-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 60ms linear, background-color 200ms ease;
+}
+
+.live__dev {
+  margin: 0;
+  text-align: center;
+  font-family: var(--t-mono-family);
+  font-size: 11px;
+  color: var(--c-muted-soft);
+}
+
+.tag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  color: var(--c-on-accent);
+}
+
+.tag--good {
+  background: var(--c-meter-good);
+}
+
+.tag--watch {
+  background: var(--c-meter-watch);
 }
 
 .meters {
@@ -111,7 +261,8 @@
 
 .segments {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: var(--s-2);
   margin-top: var(--s-2);
 }
@@ -130,7 +281,7 @@
 }
 
 .segment--active {
-  color: var(--c-ink);
+  color: var(--c-on-accent);
   border-color: transparent;
 }
 
@@ -138,12 +289,32 @@
   background: var(--c-sky);
 }
 
+.segment--a-little-slow.segment--active {
+  background: var(--c-mint);
+}
+
 .segment--good.segment--active {
   background: var(--c-meter-good);
 }
 
+.segment--a-little-fast.segment--active {
+  background: var(--c-peach);
+}
+
 .segment--fast.segment--active {
   background: var(--c-meter-flag);
+}
+
+.segment--pitch-monotone.segment--active {
+  background: var(--c-meter-watch);
+}
+
+.segment--pitch-varied.segment--active {
+  background: var(--c-meter-good);
+}
+
+.segment--pitch-expressive.segment--active {
+  background: var(--c-sky);
 }
 
 .deadair {
@@ -162,6 +333,25 @@
 
 .deadair__dot--active {
   background: var(--c-meter-flag);
+}
+
+.transcript {
+  margin-top: var(--s-4);
+}
+
+.transcript__text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--c-body-strong);
+}
+
+.filler-word {
+  background: var(--c-meter-watch);
+  color: var(--c-on-accent);
+  border-radius: var(--radius-sm);
+  padding: 0 4px;
+  font-weight: 500;
 }
 
 .summary {

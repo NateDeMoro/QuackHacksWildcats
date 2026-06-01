@@ -16,6 +16,12 @@ RUN corepack enable
 COPY pnpm-workspace.yaml package.json ./
 COPY packages/shared ./packages/shared
 COPY apps/api/package.json ./apps/api/package.json
+# Ship the email allowlist when present in the build context. The gitignored real file
+# (allowlist.json) is what enforces access; the committed example always matches the glob so the
+# COPY never fails when the real file is absent. The loader reads ./allowlist.json from the workdir.
+# NOTE: `gcloud builds submit` derives context ignores from .gitignore, so allowlist.json is excluded
+# there by default — add a .gcloudignore (or use Secret Manager) to ship it to Cloud Run.
+COPY apps/api/allowlist*.json ./
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 RUN pnpm install --prod --frozen-lockfile=false
 EXPOSE 8080

@@ -38,6 +38,7 @@ export const PITCH_VOICED_HOLD_MS = 250; // keep showing the last pitch through 
 
 // --- capture loop (audio/AudioCapture.ts) ---------------------------------------
 export const CAPTURE_DEAD_AIR_MS = 1200; // silence longer than this lights the dead-air indicator
+export const MAX_RECORDING_MS = 600_000; // hard auto-stop at 10:00 — bounds STT cost + upload size
 export const FFT_SIZE = 2048;
 export const RECORD_MIME_CANDIDATES = [
   'audio/webm;codecs=opus',

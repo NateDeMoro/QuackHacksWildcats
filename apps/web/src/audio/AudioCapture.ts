@@ -10,6 +10,7 @@ import { SpeechCoach } from './SpeechCoach.js';
 import {
   CAPTURE_DEAD_AIR_MS as DEAD_AIR_MS,
   FFT_SIZE,
+  MAX_RECORDING_MS,
   RECORD_MIME_CANDIDATES,
 } from '../config.js';
 
@@ -57,8 +58,18 @@ export class AudioCapture {
   private pitch = new PitchProcessor();
   private nudges = new NudgeEngine();
   private coach = new SpeechCoach();
+  /** Fires the auto-stop at MAX_RECORDING_MS; cleared on a manual stop. */
+  private maxTimer?: ReturnType<typeof setTimeout>;
 
-  constructor(private readonly onSnapshot: (s: LiveSnapshot) => void) {}
+  /**
+   * @param onSnapshot    called each frame with the live readout.
+   * @param onMaxDuration called once if recording reaches MAX_RECORDING_MS (the 10-min cap). The
+   *   owner wires this to the same stop path as the Stop button (see useAudioCapture / App).
+   */
+  constructor(
+    private readonly onSnapshot: (s: LiveSnapshot) => void,
+    private readonly onMaxDuration?: () => void,
+  ) {}
 
   get isRunning(): boolean {
     return this.running;
@@ -87,6 +98,9 @@ export class AudioCapture {
     this.recorder.register(this.pitch.descriptor);
 
     this.running = true;
+    // Hard cap via a timer (not the rAF clock, which throttles in a backgrounded tab) so the stop
+    // fires at MAX_RECORDING_MS even when the page is hidden.
+    if (this.onMaxDuration) this.maxTimer = setTimeout(this.onMaxDuration, MAX_RECORDING_MS);
     this.loop();
   }
 
@@ -166,6 +180,10 @@ export class AudioCapture {
     if (!this.running || !this.recorder) return undefined;
     this.running = false;
     cancelAnimationFrame(this.rafId);
+    if (this.maxTimer) {
+      clearTimeout(this.maxTimer);
+      this.maxTimer = undefined;
+    }
 
     const audio = await this.stopRecording();
     this.recorder.append(this.pause.descriptor.id, this.pause.flush());

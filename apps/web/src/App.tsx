@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SpeechContext } from '@quack/shared';
 import './dashboard/dashboard.css';
 import { useAudioCapture } from './audio/useAudioCapture.js';
@@ -20,7 +20,7 @@ type Phase = 'idle' | 'live' | 'report' | 'history';
 
 export function App() {
   const { user, loading, signIn, signOut } = useAuth();
-  const { transcribing, error, snapshot, summaries, record, report, reportPending, start, stop } =
+  const { transcribing, error, snapshot, summaries, record, report, reportPending, start, stop, onAutoStop } =
     useAudioCapture();
   const [phase, setPhase] = useState<Phase>('idle');
   const contextRef = useRef<SpeechContext>({});
@@ -37,6 +37,9 @@ export function App() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [viewed, setViewed] = useState<StoredSession | null>(null);
+
+  // Set when an /api call 403s (account not on the allowlist) → we sign out and explain the gate.
+  const [authzError, setAuthzError] = useState(false);
 
   const onStart = () => {
     setViewed(null);
@@ -65,10 +68,23 @@ export function App() {
     }
   };
 
-  const onStop = () => {
+  const onStop = useCallback(() => {
     stop(contextRef.current);
     setPhase('report');
-  };
+  }, [stop]);
+
+  // The 10-min auto-stop should behave exactly like clicking Stop (finalize + go to the report).
+  useEffect(() => onAutoStop(onStop), [onAutoStop, onStop]);
+
+  // A 403 from any /api call means the signed-in account isn't on the allowlist: explain the gate
+  // and sign out, instead of leaving a raw "(403)" error on screen.
+  useEffect(() => {
+    if (authzError) return;
+    if ([error, historyError, reuseError].some((m) => m && /account not authorized|\(403\)/.test(m))) {
+      setAuthzError(true);
+      void signOut();
+    }
+  }, [error, historyError, reuseError, signOut, authzError]);
 
   const openHistory = useCallback(async () => {
     setViewed(null);
@@ -123,6 +139,11 @@ export function App() {
             Sign in with Google
           </button>
         </div>
+        {authzError && (
+          <p className="error">
+            That account isn’t authorized for SpeakEasy. Contact the organizer to be added.
+          </p>
+        )}
       </div>
     );
   }

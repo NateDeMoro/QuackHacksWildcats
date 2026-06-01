@@ -44,6 +44,8 @@ export interface CaptureState {
   start: () => void;
   /** Stop; `context` (speech material + settings) is attached to the record. */
   stop: (context?: SpeechContext) => void;
+  /** Register the handler the 10-min auto-stop should run (App wires its Stop-button handler here). */
+  onAutoStop: (fn: () => void) => void;
 }
 
 /** Build the AggregateInput from a finished record and POST it for the report. */
@@ -118,10 +120,17 @@ export function useAudioCapture(): CaptureState {
   const [report, setReport] = useState<AggregateReport | null>(null);
   const [reportPending, setReportPending] = useState(false);
   const captureRef = useRef<AudioCapture | null>(null);
+  // App registers its Stop handler here; the AudioCapture max-duration timer invokes it so the
+  // 10-min auto-stop runs the exact same finalize + phase path as clicking Stop.
+  const autoStopRef = useRef<(() => void) | null>(null);
 
   if (captureRef.current === null) {
-    captureRef.current = new AudioCapture(setSnapshot);
+    captureRef.current = new AudioCapture(setSnapshot, () => autoStopRef.current?.());
   }
+
+  const onAutoStop = useCallback((fn: () => void) => {
+    autoStopRef.current = fn;
+  }, []);
 
   const start = useCallback(() => {
     setError(null);
@@ -191,5 +200,5 @@ export function useAudioCapture(): CaptureState {
 
   useEffect(() => () => void captureRef.current?.stop(), []);
 
-  return { running, transcribing, error, snapshot, summaries, record, report, reportPending, start, stop };
+  return { running, transcribing, error, snapshot, summaries, record, report, reportPending, start, stop, onAutoStop };
 }

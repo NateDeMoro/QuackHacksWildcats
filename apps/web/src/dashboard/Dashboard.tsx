@@ -13,8 +13,15 @@ import {
   PACE_LITTLE_SLOW_MAX,
   PACE_GOOD_MAX,
   PACE_LITTLE_FAST_MAX,
+  MAX_RECORDING_MS,
 } from '../config.js';
 import { useSpokenCue } from '../coach/useSpokenCue.js';
+
+/** mm:ss for a millisecond duration (the live auto-stop countdown). */
+function fmtClock(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
 
 // --- volume: map a speaking dBFS range to a positive 0..100 level --------------
 
@@ -99,11 +106,17 @@ export function Dashboard({ snapshot }: DashboardProps) {
   const frac = volumeLevel(snapshot.volumeDbfs);
   const pace = paceCategory(snapshot.paceSps);
   const pitch = pitchCategory(snapshot.pitchVarHz);
+  const remainingMs = Math.max(0, MAX_RECORDING_MS - snapshot.tMs);
   // A spoken cue (when enabled) briefly takes over the hero, in place of the calm nudge.
   const spokenCue = useSpokenCue(snapshot);
 
   return (
     <div className="live">
+      {snapshot.tMs > 0 && (
+        <p className={`live__countdown${remainingMs <= 60_000 ? ' live__countdown--warn' : ''}`}>
+          {fmtClock(remainingMs)} left
+        </p>
+      )}
       <div className={`nudge nudge--hero orb orb--${orbState(snapshot)}`} aria-live="polite">
         {spokenCue ? (
           <span className="nudge__text">{spokenCue}</span>

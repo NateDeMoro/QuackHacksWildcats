@@ -20,12 +20,18 @@ export interface GoogleConfig {
   projectId?: string;
   /** Gemini model id, e.g. 'gemini-2.0-flash'. */
   geminiModel?: string;
+  /**
+   * Gemini Developer API (AI Studio) key. When set, Gemini runs on the AI Studio free-tier key
+   * path instead of Vertex AI/ADC. STT, Firestore, and Auth still use ADC. Never commit this key.
+   */
+  geminiApiKey?: string;
 }
 
 export function loadGoogleConfig(): GoogleConfig {
   return {
     projectId: process.env['GOOGLE_CLOUD_PROJECT'],
     geminiModel: process.env['GEMINI_MODEL'] ?? GEMINI_MODEL_DEFAULT,
+    geminiApiKey: process.env['GEMINI_API_KEY'],
   };
 }
 
@@ -56,10 +62,11 @@ export function getSpeechClient(): v2.SpeechClient | null {
 let geminiClient: GoogleGenAI | null | undefined;
 
 /**
- * Lazily build the Gemini client on Vertex AI via Application Default Credentials (no API key).
+ * Lazily build the Gemini client on the AI Studio (Gemini Developer API) free-tier key from
+ * `GEMINI_API_KEY` — chosen over Vertex/ADC so report/tone/filler calls bill against the free tier.
  *
  * use when: generating the delivery report. Returns null when Gemini is explicitly disabled
- * (`GEMINI_MOCK=1`) or the client can't be constructed (SDK/creds absent), so the aggregate
+ * (`GEMINI_MOCK=1`), the key is unset, or the client can't be constructed, so the aggregate
  * degrades to a deterministic stub report.
  */
 export function getGeminiClient(): GoogleGenAI | null {
@@ -69,8 +76,13 @@ export function getGeminiClient(): GoogleGenAI | null {
     return null;
   }
   try {
-    const { projectId } = loadGoogleConfig();
-    geminiClient = new GoogleGenAI({ vertexai: true, project: projectId, location: 'us-central1' });
+    const { geminiApiKey } = loadGoogleConfig();
+    if (!geminiApiKey) {
+      console.warn('[gemini] GEMINI_API_KEY not set, falling back to stub report');
+      geminiClient = null;
+      return null;
+    }
+    geminiClient = new GoogleGenAI({ apiKey: geminiApiKey });
   } catch (err) {
     console.warn('[gemini] client unavailable, falling back to stub report:', err);
     geminiClient = null;

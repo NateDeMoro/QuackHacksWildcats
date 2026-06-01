@@ -101,3 +101,30 @@ Rules:
 - For each filler give its start and end time in milliseconds from the start of the clip.
 - If there are no fillers, return an empty array.
 - Output ONLY JSON matching the provided schema.`;
+
+// --- Cost estimation & per-user daily budget (security/cost.ts, security/usageLimit.ts) ---------
+// Rates are Google list prices as of 2026-06; tune here if pricing changes. The estimate is meant
+// to be a conservative upper bound that keeps real spend near the budget, not exact billing.
+
+/** Hard per-user daily spend cap (USD). Metered routes 429 once a user's UTC-day tally crosses it. */
+export const DAILY_BUDGET_USD = 3;
+
+/** Speech-to-Text V2 `latest_long` (standard) list price; billed per 15s chunk, rounded up. */
+export const STT_USD_PER_MIN = 0.016;
+export const STT_BILL_CHUNK_SEC = 15;
+
+/** Gemini 2.5 Flash list prices (USD per 1M tokens); audio input is billed at ~32 tokens/sec. */
+export const GEMINI_USD_PER_1M_TEXT_IN = 0.3;
+export const GEMINI_USD_PER_1M_TEXT_OUT = 2.5;
+export const GEMINI_USD_PER_1M_AUDIO_IN = 1.0;
+export const GEMINI_AUDIO_TOKENS_PER_SEC = 32;
+
+// --- Request size caps (bytes): reject oversized bodies before buffering (memory-DoS guard) ------
+/** ~55s of 16kHz mono 16-bit WAV ≈ 1.76 MB; cap with headroom (mirrors the web STT_MAX_SEGMENT_MS). */
+export const MAX_TRANSCRIBE_BYTES = 3_000_000;
+/** Aggregate JSON ceiling (summaries + transcript + material); ≈ the Firestore 1 MiB doc limit. */
+export const MAX_AGGREGATE_BYTES = 1_000_000;
+
+// --- WAV framing: derive audio seconds from a 16kHz mono 16-bit body length ----------------------
+export const WAV_HEADER_BYTES = 44;
+export const WAV_BYTES_PER_SEC = 32_000; // 16000 Hz * 1 channel * 2 bytes/sample

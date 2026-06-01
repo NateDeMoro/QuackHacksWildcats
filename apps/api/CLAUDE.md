@@ -15,13 +15,14 @@ best-effort persists the session; `/api/sessions` lists/retrieves prior rehearsa
 ## Files
 | Path | Description | Open when... |
 |------|-------------|--------------|
-| src/server.ts | Hono server (/api basePath): /health (public), /aggregate (+persist), /sessions, /sessions/:id, /transcribe (all `requireAuth`); CORS allowlist | adding routes |
-| src/auth/requireAuth.ts | Hono middleware: verify `Authorization: Bearer <idToken>` → `c.get('uid')`; `AUTH_MOCK` bypass | gating a route on a user |
-| src/config.ts | STT lexicon/boosts/`STT_MODEL` + report/tone/filler system instructions and low-temp constants | tuning STT or the Gemini prompts |
+| src/server.ts | Hono server (/api basePath): /health (public), /aggregate (+persist), /sessions, /sessions/:id, /transcribe (all `requireAuth`; paid routes also `usageLimit`); CORS allowlist | adding routes |
+| src/auth/requireAuth.ts | Hono middleware: verify `Authorization: Bearer <idToken>` → `c.get('uid')`; email allowlist (403); `AUTH_MOCK` bypass | gating a route on a user |
+| src/config.ts | STT lexicon/boosts/`STT_MODEL` + report/tone/filler system instructions and low-temp constants; cost/budget/size-cap tunables | tuning STT, the prompts, or the cost limits |
+| src/security/ | `posture.ts` (prod/dev gates), `allowlist.ts` (email allowlist loader), `cost.ts` (USD estimators), `usageLimit.ts` ($3/day + size-cap middleware) | changing access control or the cost cap |
 | src/stt/transcribe.ts | batch STT v2: audio → Transcript, filler-lexicon disfluency tags; `transcribeWithFillers` (the route entry) runs STT + the Gemini filler pass concurrently and merges recovered fillers into `words` (dedup ±300ms); `autoDecodingConfig` handles webm/opus + the chunker's WAV | tuning transcription |
 | src/stt/geminiFillers.ts | Gemini verbatim audio pass (`inlineData`, temp 0) recovering the fillers STT drops → `isDisfluency` words; null client → `[]` (degrades to STT-only). Gemini rejects webm, so the client uploads WAV | recovering dropped fillers |
 | src/aggregate/runAggregate.ts | AggregateFn impl: 2 concurrent independently-degrading Gemini calls (report + tone@0.2); transcript-derived WPM pace block injected into the report prompt | building the report |
-| src/google/clients.ts | Speech + Gemini (Vertex) + Firestore clients (ADC, env-gated mocks) | wiring Google SDKs |
+| src/google/clients.ts | Speech + Firestore + Auth via ADC; Gemini via AI Studio `GEMINI_API_KEY`; env-gated mocks | wiring Google SDKs |
 | Dockerfile | Cloud Run container (build from repo root) | deploying |
 
 ## Clients & mocks (`google/clients.ts`)
@@ -29,7 +30,8 @@ best-effort persists the session; `/api/sessions` lists/retrieves prior rehearsa
   `STT_MOCK=1` (mock transcript), `GEMINI_MOCK=1` (deterministic stub report), `FIRESTORE_MOCK=1`
   (persistence disabled), `AUTH_MOCK=1` (skip ID-token verify; middleware injects `AUTH_MOCK_UID`,
   default `dev-user`). Run all four set to skip every Google call for offline dev.
-- ADC only (no keys). Gemini uses Vertex AI (`{ vertexai: true, location: 'us-central1' }`);
+- STT/Firestore/Auth use ADC (no keys). Gemini uses the **AI Studio (Gemini Developer API)
+  free-tier key** from `GEMINI_API_KEY` (`new GoogleGenAI({ apiKey })`) — unset key → stub report.
   Firestore + Auth share one firebase-admin app (`getApps().length===0` guard); Firestore sets
   `ignoreUndefinedProperties`. `getAuthClient()` is consumed only by `requireAuth`.
 - Deps: `@google/genai`, `firebase-admin` (added Stage 2), `@google-cloud/speech`.
@@ -37,6 +39,10 @@ best-effort persists the session; `/api/sessions` lists/retrieves prior rehearsa
 ## Auth & per-user data
 - Routes require a verified Firebase ID token (`requireAuth`); the uid comes ONLY from the token,
   never the body/query. `/health` stays public.
+- Access is further gated by an email allowlist (`security/allowlist.ts`; gitignored `allowlist.json`,
+  `ALLOWLIST_PATH` to override) → non-listed email is 403, plus a per-user **$3/day** estimated-cost
+  cap (`security/usageLimit.ts`) tallied at `users/{uid}/usage/{YYYY-MM-DD}` (UTC). Both fail-closed
+  when `NODE_ENV=production`; skipped in dev via `AUTH_MOCK`/`FIRESTORE_MOCK`. Tunables in `config.ts`.
 - Sessions are stored per user at `users/{uid}/sessions/{sessionId}` (ownership is path-based, so a
   foreign id read just 404s — no composite index, no manual `where(uid)` filter to forget).
 - CORS is an allowlist (hosting origins + `localhost:5173`) with `Authorization` allowed; Cloud Run

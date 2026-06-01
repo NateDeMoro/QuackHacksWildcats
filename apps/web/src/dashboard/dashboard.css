@@ -205,6 +205,20 @@
   color: var(--c-muted-soft);
 }
 
+/* Countdown to the 10-min auto-stop; turns to the flag color in the final minute. */
+.live__countdown {
+  margin: 0;
+  text-align: center;
+  font-family: var(--t-mono-family);
+  font-size: 13px;
+  color: var(--c-muted);
+}
+
+.live__countdown--warn {
+  color: var(--c-meter-flag);
+  font-weight: 500;
+}
+
 .tag {
   display: inline-block;
   font-size: 12px;

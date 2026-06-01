@@ -8,6 +8,8 @@ import { runAggregate } from './aggregate/runAggregate.js';
 import { transcribeWithFillers } from './stt/transcribe.js';
 import { getFirestore } from './google/clients.js';
 import { requireAuth, type AuthEnv } from './auth/requireAuth.js';
+import { usageLimit } from './security/usageLimit.js';
+import { MAX_TRANSCRIBE_BYTES } from './config.js';
 
 // Mounted under /api so Firebase Hosting can rewrite /api/** → this Cloud Run service.
 const app = new Hono<AuthEnv>().basePath('/api');
@@ -40,7 +42,7 @@ const userSessions = (db: NonNullable<ReturnType<typeof getFirestore>>, uid: str
  * returns the report. We store the summaries — never the raw per-frame `series` — to stay under
  * the 1 MiB doc limit; comparison views only need summaries.
  */
-app.post('/aggregate', requireAuth, async (c) => {
+app.post('/aggregate', requireAuth, usageLimit('aggregate'), async (c) => {
   const input = (await c.req.json()) as AggregateInput;
   const report = await runAggregate(input);
 
@@ -106,11 +108,13 @@ app.get('/sessions/:id', requireAuth, async (c) => {
 });
 
 /** Stage 1: transcribe a recorded rehearsal clip (raw audio body) → word-level Transcript. */
-app.post('/transcribe', requireAuth, async (c) => {
+app.post('/transcribe', requireAuth, usageLimit('transcribe'), async (c) => {
   const body = new Uint8Array(await c.req.arrayBuffer());
   const contentType = c.req.header('content-type');
   console.log(`[transcribe] ${body.byteLength} bytes, content-type=${contentType}`);
   if (body.byteLength === 0) return c.json({ error: 'empty audio body' }, 400);
+  // Defense-in-depth for a missing Content-Length (chunked encoding bypasses the guard's pre-check).
+  if (body.byteLength > MAX_TRANSCRIBE_BYTES) return c.json({ error: 'payload too large' }, 413);
   try {
     const transcript: Transcript = await transcribeWithFillers(body, contentType);
     return c.json(transcript);

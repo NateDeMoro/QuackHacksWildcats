@@ -35,8 +35,10 @@ Auth: Firebase native Google sign-in. The web does Firebase Auth client-side (it
 config in `apps/web/src/firebase.ts` is not a secret) and sends the ID token on every `/api`
 call via `authedFetch`; the API verifies it with firebase-admin and attributes data to the uid.
 History is stored per user at `users/{uid}/sessions/{sessionId}` (ownership is path-based — no
-composite index needed). The whole app is gated behind sign-in. `AUTH_MOCK=1` bypasses token
-verification for offline dev (injects `AUTH_MOCK_UID`).
+composite index needed). The whole app is gated behind sign-in, then further restricted to an email
+allowlist (gitignored `apps/api/allowlist.json`) plus a per-user **$3/day** estimated-cost cap — both
+fail-closed in production. `AUTH_MOCK=1` bypasses token verification for offline dev (injects
+`AUTH_MOCK_UID`).
 
 Commands: `pnpm install`; `pnpm dev` (web); `pnpm -r typecheck`; `pnpm -r build`;
 `pnpm --filter @quack/api dev` (API on :8080).
@@ -47,6 +49,9 @@ Web → Firebase Hosting (https://uoo-quackathon26eug-8210.web.app); API → Clo
 The Hono app is mounted at `/api` (`basePath`); the Vite dev proxy mirrors this.
 - API: `gcloud builds submit --config cloudbuild.yaml .` then
   `gcloud run deploy quack-api --image gcr.io/$PROJECT/quack-api:latest --region us-central1 --allow-unauthenticated --port 8080`
+- Gemini runs on the AI Studio (Gemini Developer API) free-tier key, not Vertex. Cloud Run needs
+  `GEMINI_API_KEY` set or the report degrades to a stub. Prefer Secret Manager:
+  `--set-secrets GEMINI_API_KEY=gemini-api-key:latest` (or `--set-env-vars GEMINI_API_KEY=...`).
 - Web: `pnpm -r build` then `firebase deploy --only hosting`
 - Firestore rules/indexes: `firebase deploy --only firestore:rules,firestore:indexes`
 - Auth setup (console, one-time): enable the Google sign-in provider; ensure `localhost` +

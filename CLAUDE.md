@@ -43,17 +43,18 @@ fail-closed in production. `AUTH_MOCK=1` bypasses token verification for offline
 Commands: `pnpm install`; `pnpm dev` (web); `pnpm -r typecheck`; `pnpm -r build`;
 `pnpm --filter @quack/api dev` (API on :8080).
 
-## Deploy (project `uoo-quackathon26eug-8210`, region us-central1)
-Web → Firebase Hosting (https://uoo-quackathon26eug-8210.web.app); API → Cloud Run
+## Deploy (project `speakeasy-498118`, region us-central1)
+Web → Firebase Hosting (https://speakeasy-498118.web.app); API → Cloud Run
 (`quack-api`). Hosting rewrites `/api/**` → Cloud Run, so the browser hits one origin.
 The Hono app is mounted at `/api` (`basePath`); the Vite dev proxy mirrors this.
 - API: `gcloud builds submit --config cloudbuild.yaml .` then
-  `gcloud run deploy quack-api --image gcr.io/$PROJECT/quack-api:latest --region us-central1 --allow-unauthenticated --port 8080`
-- Gemini runs on the AI Studio (Gemini Developer API) free-tier key by default; `GEMINI_USE_VERTEX=1`
-  switches it to Vertex AI over ADC (needs the Vertex AI API enabled + `roles/aiplatform.user`). On
-  the key path, Cloud Run needs `GEMINI_API_KEY` set or the report degrades to a stub. Prefer Secret
-  Manager:
-  `--set-secrets GEMINI_API_KEY=gemini-api-key:latest` (or `--set-env-vars GEMINI_API_KEY=...`).
+  `gcloud run deploy quack-api --image gcr.io/$PROJECT_ID/quack-api:latest --region us-central1 --allow-unauthenticated --port 8080 --set-env-vars GOOGLE_CLOUD_PROJECT=speakeasy-498118,GEMINI_USE_VERTEX=1`
+- Gemini: **prod runs on Vertex AI** (`GEMINI_USE_VERTEX=1`, ADC) — needs the Vertex AI API enabled +
+  `roles/aiplatform.user` on the Cloud Run runtime SA. Unset the flag to fall back to the AI Studio
+  (Gemini Developer API) key, which then needs `GEMINI_API_KEY` (Secret Manager:
+  `--set-secrets GEMINI_API_KEY=gemini-api-key:latest`) or the report degrades to a stub.
+- Allowlist: `apps/api/allowlist.json` is gitignored; `.gcloudignore` ships it to Cloud Build so the
+  container has it (prod fails closed → 503 without it). Editing it requires an API rebuild + redeploy.
 - Web: `pnpm -r build` then `firebase deploy --only hosting`
 - Firestore rules/indexes: `firebase deploy --only firestore:rules,firestore:indexes`
 - Auth setup (console, one-time): enable the Google sign-in provider; ensure `localhost` +

@@ -10,8 +10,8 @@ but missing local Google auth: the Speech v2 client had no Application Default C
 **Fix (local dev):**
 ```
 gcloud auth application-default login
-gcloud auth application-default set-quota-project uoo-quackathon26eug-8210
-export GOOGLE_CLOUD_PROJECT=uoo-quackathon26eug-8210   # before `pnpm --filter @quack/api dev`
+gcloud auth application-default set-quota-project speakeasy-498118
+export GOOGLE_CLOUD_PROJECT=speakeasy-498118   # before `pnpm --filter @quack/api dev`
 ```
 Also ensure the Speech-to-Text API is enabled (`gcloud services enable speech.googleapis.com`).
 
@@ -175,3 +175,40 @@ extracting important phrases, with an under/over verdict computed in code agains
 was removed across the backend, shared contract, frontend card, and docs. The per-word acoustic
 `stress` signal it produced is retained — it now only weights the report transcript (stressed words
 read heavier). Tone-content mismatch is unaffected.
+
+## Production migrated to a new project (`speakeasy-498118`) — old lab project orphaned
+**Deploy/hosting (whole stack). 2026-06-01.** The original project `uoo-quackathon26eug-8210` was
+owned by a lab account (`devstar8210@gcplab.me`) that was deleted — gcloud/Firebase auth returned
+`invalid_grant: Account has been deleted`, and the personal account had no IAM on it, so it could not
+be redeployed. Stood up a fresh project `speakeasy-498118` under `nathanieldemoro@gmail.com` (billing
+linked) and re-pointed `.firebaserc`, `apps/web/src/firebase.ts` (new web config), and the `apps/api`
+CORS allowlist. Re-provisioned from scratch: enabled APIs (run, cloudbuild, artifactregistry, speech,
+firestore, firebase, secretmanager, aiplatform), created the Firestore native DB in us-central1,
+re-added Firebase + a web app, redeployed API + web + rules.
+
+**Gotcha — adding Firebase to an existing GCP project:** `firebase projects:addfirebase` 403s
+(even as project Owner) until the account accepts the Firebase ToS once via the console
+("Add project → select existing GCP project"). And `firebase login --reauth` re-auths the *current*
+account; use `firebase login:add` to switch to a different one.
+
+## AI Studio Gemini key 429s on a billing-enabled project → switched prod to Vertex
+**Deploy, Gemini (apps/api). 2026-06-02.** On the AI Studio (`GEMINI_API_KEY`) path, every Gemini
+call returned `429 RESOURCE_EXHAUSTED: "prepayment credits are depleted"`. Because the key's project
+(`speakeasy-498118`) has Cloud billing linked, AI Studio placed it on the **paid (prepay) tier** with
+a zero balance — not the free tier — so report/tone/filler calls all degraded to the stub while STT
+(separate billing) still worked. UI symptom: "Stub report — Gemini disabled or unavailable."
+
+**Fix:** flipped prod to Vertex AI via the existing toggle — enabled `aiplatform.googleapis.com`,
+granted the Cloud Run runtime SA `roles/aiplatform.user`, set `GEMINI_USE_VERTEX=1` on the service.
+Gemini now bills to the project's Cloud account over ADC (no key); the per-user $3/day cap still
+bounds it. Verified `gemini-2.5-flash` answers in `us-central1`.
+
+## Gitignored allowlist isn't shipped to Cloud Build by default
+**Deploy, access control (apps/api). 2026-06-02.** `apps/api/allowlist.json` is gitignored (it holds
+real emails), and `gcloud builds submit` derives its upload-ignore set from `.gitignore` — so the file
+was excluded from the build context, and the prod container would fail closed (503 on every authed
+call, since the allowlist check is fail-closed when `NODE_ENV=production`).
+
+**Fix:** added a `.gcloudignore` that mirrors `.gitignore` but intentionally ships `allowlist.json`
+(still excludes `.env*`). The Dockerfile `COPY apps/api/allowlist*.json ./` bakes it into the image.
+Editing the allowlist therefore requires an API rebuild + redeploy, not just a Firestore/console change.

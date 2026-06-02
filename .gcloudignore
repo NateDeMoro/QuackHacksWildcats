@@ -1,0 +1,17 @@
+# Files NOT uploaded to Cloud Build (`gcloud builds submit`). Without this file gcloud derives its
+# ignores from .gitignore — which would exclude apps/api/allowlist.json and brick prod (the API
+# fails closed when the allowlist is missing). This mirrors .gitignore EXCEPT it intentionally ships
+# apps/api/allowlist.json. Secrets (.env*) stay excluded.
+.git
+.gitignore
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+!.env.example
+coverage/
+.vite/
+.firebase/

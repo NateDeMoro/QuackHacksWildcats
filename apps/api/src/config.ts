@@ -11,6 +11,9 @@ export const STT_MODEL = 'latest_long' as const;
 /** Default Gemini model for the report; overridden by the `GEMINI_MODEL` env var. */
 export const GEMINI_MODEL_DEFAULT = 'gemini-2.5-flash' as const;
 
+/** Default Vertex AI location for Gemini (used when `GEMINI_USE_VERTEX=1`); override via `GOOGLE_CLOUD_LOCATION`. */
+export const GEMINI_LOCATION_DEFAULT = 'us-central1' as const;
+
 /**
  * Non-lexical fillers plus the most common verbal crutch. Includes spelling variants because STT
  * picks one spelling and we can't predict which. Conservative overall to avoid over-flagging.

@@ -21,8 +21,8 @@ app.use(
   '/*',
   cors({
     origin: [
-      'https://uoo-quackathon26eug-8210.web.app',
-      'https://uoo-quackathon26eug-8210.firebaseapp.com',
+      'https://speakeasy-498118.web.app',
+      'https://speakeasy-498118.firebaseapp.com',
       'http://localhost:5173',
     ],
     allowHeaders: ['Authorization', 'Content-Type'],

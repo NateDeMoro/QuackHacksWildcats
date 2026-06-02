@@ -13,7 +13,7 @@ import { GoogleGenAI } from '@google/genai';
 import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
 import { getFirestore as adminGetFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getAuth as adminGetAuth, type Auth } from 'firebase-admin/auth';
-import { GEMINI_MODEL_DEFAULT } from '../config.js';
+import { GEMINI_MODEL_DEFAULT, GEMINI_LOCATION_DEFAULT } from '../config.js';
 
 export interface GoogleConfig {
   /** GCP project id (from env on Cloud Run). */
@@ -21,10 +21,14 @@ export interface GoogleConfig {
   /** Gemini model id, e.g. 'gemini-2.0-flash'. */
   geminiModel?: string;
   /**
-   * Gemini Developer API (AI Studio) key. When set, Gemini runs on the AI Studio free-tier key
-   * path instead of Vertex AI/ADC. STT, Firestore, and Auth still use ADC. Never commit this key.
+   * Gemini Developer API (AI Studio) key — used on the default path (`useVertex` false). STT,
+   * Firestore, and Auth always use ADC; this key is the one exception. Never commit it.
    */
   geminiApiKey?: string;
+  /** When true (`GEMINI_USE_VERTEX=1`), Gemini runs on Vertex AI via ADC instead of the AI Studio key. */
+  useVertex?: boolean;
+  /** Vertex AI location for Gemini (when `useVertex`); defaults to `GEMINI_LOCATION_DEFAULT`. */
+  geminiLocation?: string;
 }
 
 export function loadGoogleConfig(): GoogleConfig {
@@ -32,6 +36,8 @@ export function loadGoogleConfig(): GoogleConfig {
     projectId: process.env['GOOGLE_CLOUD_PROJECT'],
     geminiModel: process.env['GEMINI_MODEL'] ?? GEMINI_MODEL_DEFAULT,
     geminiApiKey: process.env['GEMINI_API_KEY'],
+    useVertex: process.env['GEMINI_USE_VERTEX'] === '1',
+    geminiLocation: process.env['GOOGLE_CLOUD_LOCATION'] ?? GEMINI_LOCATION_DEFAULT,
   };
 }
 
@@ -62,12 +68,15 @@ export function getSpeechClient(): v2.SpeechClient | null {
 let geminiClient: GoogleGenAI | null | undefined;
 
 /**
- * Lazily build the Gemini client on the AI Studio (Gemini Developer API) free-tier key from
- * `GEMINI_API_KEY` — chosen over Vertex/ADC so report/tone/filler calls bill against the free tier.
+ * Lazily build the Gemini client. Two paths, selected by `GEMINI_USE_VERTEX`:
+ *  - default (unset/0): AI Studio (Gemini Developer API) free-tier key from `GEMINI_API_KEY`.
+ *  - `GEMINI_USE_VERTEX=1`: Vertex AI over ADC (the same creds STT/Firestore/Auth use), no key —
+ *    needs `GOOGLE_CLOUD_PROJECT`, a location (`GOOGLE_CLOUD_LOCATION`/`GEMINI_LOCATION_DEFAULT`),
+ *    the Vertex AI API enabled, and `roles/aiplatform.user`.
  *
- * use when: generating the delivery report. Returns null when Gemini is explicitly disabled
- * (`GEMINI_MOCK=1`), the key is unset, or the client can't be constructed, so the aggregate
- * degrades to a deterministic stub report.
+ * use when: generating the delivery report or the filler pass. Returns null when Gemini is disabled
+ * (`GEMINI_MOCK=1`), the selected path's credentials are missing, or the client can't be built — so
+ * the aggregate degrades to a deterministic stub report.
  */
 export function getGeminiClient(): GoogleGenAI | null {
   if (geminiClient !== undefined) return geminiClient;
@@ -76,13 +85,23 @@ export function getGeminiClient(): GoogleGenAI | null {
     return null;
   }
   try {
-    const { geminiApiKey } = loadGoogleConfig();
-    if (!geminiApiKey) {
-      console.warn('[gemini] GEMINI_API_KEY not set, falling back to stub report');
-      geminiClient = null;
-      return null;
+    const { geminiApiKey, useVertex, projectId, geminiLocation } = loadGoogleConfig();
+    if (useVertex) {
+      if (!projectId) {
+        console.warn('[gemini] GEMINI_USE_VERTEX=1 but GOOGLE_CLOUD_PROJECT not set, falling back to stub report');
+        geminiClient = null;
+        return null;
+      }
+      // Vertex AI over ADC (the same credentials STT/Firestore/Auth use) — no API key.
+      geminiClient = new GoogleGenAI({ vertexai: true, project: projectId, location: geminiLocation });
+    } else {
+      if (!geminiApiKey) {
+        console.warn('[gemini] GEMINI_API_KEY not set, falling back to stub report');
+        geminiClient = null;
+        return null;
+      }
+      geminiClient = new GoogleGenAI({ apiKey: geminiApiKey });
     }
-    geminiClient = new GoogleGenAI({ apiKey: geminiApiKey });
   } catch (err) {
     console.warn('[gemini] client unavailable, falling back to stub report:', err);
     geminiClient = null;

@@ -49,8 +49,10 @@ Web → Firebase Hosting (https://uoo-quackathon26eug-8210.web.app); API → Clo
 The Hono app is mounted at `/api` (`basePath`); the Vite dev proxy mirrors this.
 - API: `gcloud builds submit --config cloudbuild.yaml .` then
   `gcloud run deploy quack-api --image gcr.io/$PROJECT/quack-api:latest --region us-central1 --allow-unauthenticated --port 8080`
-- Gemini runs on the AI Studio (Gemini Developer API) free-tier key, not Vertex. Cloud Run needs
-  `GEMINI_API_KEY` set or the report degrades to a stub. Prefer Secret Manager:
+- Gemini runs on the AI Studio (Gemini Developer API) free-tier key by default; `GEMINI_USE_VERTEX=1`
+  switches it to Vertex AI over ADC (needs the Vertex AI API enabled + `roles/aiplatform.user`). On
+  the key path, Cloud Run needs `GEMINI_API_KEY` set or the report degrades to a stub. Prefer Secret
+  Manager:
   `--set-secrets GEMINI_API_KEY=gemini-api-key:latest` (or `--set-env-vars GEMINI_API_KEY=...`).
 - Web: `pnpm -r build` then `firebase deploy --only hosting`
 - Firestore rules/indexes: `firebase deploy --only firestore:rules,firestore:indexes`

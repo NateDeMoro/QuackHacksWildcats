@@ -13,12 +13,12 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyBb84DgpjgoHjkKjJI0Z1ItS8736niXRi0',
-  authDomain: 'uoo-quackathon26eug-8210.firebaseapp.com',
-  projectId: 'uoo-quackathon26eug-8210',
-  storageBucket: 'uoo-quackathon26eug-8210.firebasestorage.app',
-  messagingSenderId: '1046662941340',
-  appId: '1:1046662941340:web:7478399e3828e324633b59',
+  apiKey: 'AIzaSyCi8n7l26-L188oDHMHYs29CJAh1wH5qFs',
+  authDomain: 'speakeasy-498118.firebaseapp.com',
+  projectId: 'speakeasy-498118',
+  storageBucket: 'speakeasy-498118.firebasestorage.app',
+  messagingSenderId: '848778281032',
+  appId: '1:848778281032:web:59f793ad2df3122666987d',
 };
 
 const app = initializeApp(firebaseConfig);

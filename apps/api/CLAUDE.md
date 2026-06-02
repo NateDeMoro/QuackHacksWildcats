@@ -1,7 +1,7 @@
 # @quack/api
 
 Cloud Run service. Proxies Gemini + Speech-to-Text and persists sessions to Firestore.
-Stage 2: `/api/aggregate` returns a context-aware Gemini report (Vertex AI, JSON mode) and
+Stage 2: `/api/aggregate` returns a context-aware Gemini report (JSON mode) and
 best-effort persists the session; `/api/sessions` lists/retrieves prior rehearsals.
 
 ## Edit rules
@@ -22,7 +22,7 @@ best-effort persists the session; `/api/sessions` lists/retrieves prior rehearsa
 | src/stt/transcribe.ts | batch STT v2: audio → Transcript, filler-lexicon disfluency tags; `transcribeWithFillers` (the route entry) runs STT + the Gemini filler pass concurrently and merges recovered fillers into `words` (dedup ±300ms); `autoDecodingConfig` handles webm/opus + the chunker's WAV | tuning transcription |
 | src/stt/geminiFillers.ts | Gemini verbatim audio pass (`inlineData`, temp 0) recovering the fillers STT drops → `isDisfluency` words; null client → `[]` (degrades to STT-only). Gemini rejects webm, so the client uploads WAV | recovering dropped fillers |
 | src/aggregate/runAggregate.ts | AggregateFn impl: 2 concurrent independently-degrading Gemini calls (report + tone@0.2); transcript-derived WPM pace block injected into the report prompt | building the report |
-| src/google/clients.ts | Speech + Firestore + Auth via ADC; Gemini via AI Studio `GEMINI_API_KEY`; env-gated mocks | wiring Google SDKs |
+| src/google/clients.ts | Speech + Firestore + Auth via ADC; Gemini via AI Studio `GEMINI_API_KEY` or Vertex (`GEMINI_USE_VERTEX`); env-gated mocks | wiring Google SDKs |
 | Dockerfile | Cloud Run container (build from repo root) | deploying |
 
 ## Clients & mocks (`google/clients.ts`)
@@ -30,8 +30,9 @@ best-effort persists the session; `/api/sessions` lists/retrieves prior rehearsa
   `STT_MOCK=1` (mock transcript), `GEMINI_MOCK=1` (deterministic stub report), `FIRESTORE_MOCK=1`
   (persistence disabled), `AUTH_MOCK=1` (skip ID-token verify; middleware injects `AUTH_MOCK_UID`,
   default `dev-user`). Run all four set to skip every Google call for offline dev.
-- STT/Firestore/Auth use ADC (no keys). Gemini uses the **AI Studio (Gemini Developer API)
-  free-tier key** from `GEMINI_API_KEY` (`new GoogleGenAI({ apiKey })`) — unset key → stub report.
+- STT/Firestore/Auth use ADC (no keys). Gemini defaults to the **AI Studio (Gemini Developer API)
+  free-tier key** from `GEMINI_API_KEY` (`new GoogleGenAI({ apiKey })`) — unset key → stub report;
+  `GEMINI_USE_VERTEX=1` switches Gemini to **Vertex AI via ADC** (project + `GOOGLE_CLOUD_LOCATION`).
   Firestore + Auth share one firebase-admin app (`getApps().length===0` guard); Firestore sets
   `ignoreUndefinedProperties`. `getAuthClient()` is consumed only by `requireAuth`.
 - Deps: `@google/genai`, `firebase-admin` (added Stage 2), `@google-cloud/speech`.
